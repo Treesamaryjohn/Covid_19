@@ -1,0 +1,154 @@
+---
+title: "<center> Impact of Covid-19 in the travelling behavior of New Zealanders"
+author: "Treesa Mary John"
+date: "17/02/2021"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+theme: cerulean
+---
+
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 12px;
+  }
+td {  /* Table  */
+  font-size: 8px;
+}
+h1.title {
+  font-size: 38px;
+  color: Red;
+}
+h1 { /* Header 1 */
+  font-size: 28px;
+  color: DarkBlue;
+}
+h2 { /* Header 2 */
+    font-size: 22px;
+  color: DarkBlue;
+}
+h3 { /* Header 3 */
+  font-size: 18px;
+  font-family: "Times New Roman", Times, serif;
+  color: DarkBlue;
+}
+code.r{ /* Code block */
+    font-size: 12px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 14px;
+}
+</style>
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+## Introduction
+A number of scientific studies showed that satisfaction with daily travel directly influences emotional well-being and both directly and indirectly life satisfaction. Traveling has the ability to take you out of our daily routine and into new surroundings and experiences and this can reset your body and mind. This keeps the mind sharp, increases creativity and helps with personal growth. The aim of this study is to analysis the changes in travelling behaviour of New zealanders due to the effects of COVID-19.
+
+## Data preprocessing
+
+
+```{r message=FALSE}
+library(tidyverse) #tidyverse collects most versatile R packages and used to clean, model, proces and vsiualize data
+library(ggplot2)#used to create elegant and complex plots
+library(visdat)
+library(naniar)
+library(dplyr)
+library(caret)
+library(Hmisc)
+library(lubridate)
+covid_data <- read.csv("covid_data.csv")
+str(covid_data)
+gg_miss_var(covid_data)
+```
+
+The value column contains 4.2% of rows with NA values. These are corresponding to units "$", "Number", "Annual % change","Index", Litres" and  "Traffic count". In addition to this, structure of the data shows that column "last_date_updated" is in factor type, where as it describes date of the data updated.
+To handle NA values, dataset is  considered into four parts: without NA values, with NA values and units "$", "Number", "Litres" and  "Traffic count", with NA values and units index", and with NA values and units"Annual % change". 
+
+```{r}
+data_a <- na.omit(covid_data)
+annual_percentage_change <- data_a %>% filter(units == "Annual % change") 
+mean_annual_percentage_change <- mean(annual_percentage_change$value)
+index <- data_a %>% filter(units == "Index") 
+mean_index <- mean(index$value)
+NA_data <- subset(covid_data,is.na(value))
+select_data <- subset(NA_data, units %in% c("$", "Number", "Litres", "Traffic count"))
+select_data[is.na(select_data)] <- 0
+select_data1 <- subset(NA_data, units %in%  "Annual % change")
+select_data1[is.na(select_data1)] <- mean_annual_percentage_change
+select_data2 <- subset(NA_data, units %in%  "Index")
+select_data2[is.na(select_data2)] <- mean_index
+data_b <- rbind(select_data1, select_data2, select_data)
+data_frame <- rbind(data_a, data_b)
+data_frame$date_last_updated <- as.Date(data_frame$date_last_updated, format = "%d/%m/%y")
+```
+ 
+
+* NA values with units "$", "Number", "Litres" and  "Traffic count" are replaced with 0.
+
+* NA values with units "index" are imputed with column mean
+
+* NA values with units"Annual % change" are imputed with column mean
+
+The four dataframes without NA walues are merged with rbind.
+
+The last_date_updated column changed to "date" type for further processing.
+Then, the four data frames without NA values are merged using rbind.
+
+## Data Selection
+
+```{r}
+new_data <- data_frame %>% filter((category == "Travel" | category == "COVID-19") & 
+                                   (indicator_name == "Number of cases" | indicator_name == "Daily border crossings - arrivals" |
+                                      indicator_name == "Daily border crossings - departures") &
+                                   (sub_series_name == "Active" | sub_series_name == "Total"))
+new_data$parameter <- as.Date(new_data$parameter, format = "%d/%m/%y")
+
+```
+
+
+Impact of the covid-19 on international travelling can be analysed by selecting the categories "Travel" and "COVID-19" with total number of boarder crossing and active covid cases.Domestic travelling changes are evaluated with traffic count of light vehicles in various areas.The duplicate columns are filtered out to avoid aggregation of data.
+
+
+
+## Visualization
+Fig.1 depicts a negative trend on travelling behaviour from February 2020 to June 2020 meaning there is a significant reduction in the number of international travellers at this time. The number of travellers over this period  is the lowest values in the last 2 years. Also, the trend shows fluctuation over the period June 2020 to October 2020 and then thete is a gradual increase to the peak.
+
+```{r}
+ggplot(new_data, aes(x=parameter, y=value)) +
+  scale_x_date(date_breaks = "3 month", date_labels = "%m-%Y") +
+geom_point(mapping = aes(x = parameter, y = value)) +
+  geom_smooth(mapping = aes(x = parameter, y = value))+
+  ggtitle("Impacts of Covid-19 on international travelling")+
+  labs(x = "Year" ,y ="Number")
+```
+
+
+
+ Covid-19 hits New Zealand in March 2020, which leads to level 4 lockdown and international boarder crossing in April 2020.This can be one of the major reason for the drop in the number of international travellers. Moreover, considerable reduction in New zealand finance and unhealthly jobmarket trends impacted in travelling.
+```{r}
+library("ggExtra")
+library("ggplot2")
+piris <- ggplot(new_data, aes(parameter, value, colour = category)) +
+  scale_x_date(date_breaks = "4 month", date_labels = "%m-%Y") +
+  geom_point() +
+  geom_smooth(method = "loess") +
+  labs(x = "Weekly Learning Time", y = "Science Scores") +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())+
+  ggtitle("Changes in the Number of travellers with covid rate")+
+  labs(x = "Year" ,y ="Number")
+ggMarginal(piris, groupColour = TRUE, groupFill = TRUE)
+
+```
+From figure.2, there is a negative corelation between number of active covid cases and number of travellers. AS the number of covid cases increased, travellers number decreased. When the active covid case reporting goes to low values, travellers count increased. 
+
+
+
+
