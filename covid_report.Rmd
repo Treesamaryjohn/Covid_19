@@ -62,6 +62,8 @@ library(dplyr)
 library(caret)
 library(Hmisc)
 library(lubridate)
+library("ggExtra")
+library("ggplot2")
 covid_data <- read.csv("covid_data.csv")
 str(covid_data)
 gg_miss_var(covid_data)
@@ -71,21 +73,21 @@ The value column contains 4.2% of rows with NA values. These are corresponding t
 To handle NA values, dataset is  considered into four parts: without NA values, with NA values and units "$", "Number", "Litres" and  "Traffic count", with NA values and units index", and with NA values and units"Annual % change". 
 
 ```{r}
-data_a <- na.omit(covid_data)
-annual_percentage_change <- data_a %>% filter(units == "Annual % change") 
-mean_annual_percentage_change <- mean(annual_percentage_change$value)
-index <- data_a %>% filter(units == "Index") 
-mean_index <- mean(index$value)
-NA_data <- subset(covid_data,is.na(value))
+data_a <- na.omit(covid_data) # data without NA values
+annual_percentage_change <- data_a %>% filter(units == "Annual % change") # data corresponding to units = Annual % change
+mean_annual_percentage_change <- mean(annual_percentage_change$value) # mean of annual % change
+index <- data_a %>% filter(units == "Index") # data corresponding to units = index
+mean_index <- mean(index$value) # mean of index
+NA_data <- subset(covid_data,is.na(value)) # Data subset with NA values
 select_data <- subset(NA_data, units %in% c("$", "Number", "Litres", "Traffic count"))
-select_data[is.na(select_data)] <- 0
+select_data[is.na(select_data)] <- 0 
 select_data1 <- subset(NA_data, units %in%  "Annual % change")
 select_data1[is.na(select_data1)] <- mean_annual_percentage_change
 select_data2 <- subset(NA_data, units %in%  "Index")
 select_data2[is.na(select_data2)] <- mean_index
 data_b <- rbind(select_data1, select_data2, select_data)
-data_frame <- rbind(data_a, data_b)
-data_frame$date_last_updated <- as.Date(data_frame$date_last_updated, format = "%d/%m/%y")
+data_frame <- rbind(data_a, data_b) # binding data frames
+data_frame$date_last_updated <- as.Date(data_frame$date_last_updated, format = "%d/%m/%y")  # converting date_last_updated to date type
 ```
  
 
@@ -120,6 +122,7 @@ Impact of the covid-19 on international travelling can be analysed by selecting 
 Fig.1 depicts a negative trend on travelling behaviour from February 2020 to June 2020 meaning there is a significant reduction in the number of international travellers at this time. The number of travellers over this period  is the lowest values in the last 2 years. Also, the trend shows fluctuation over the period June 2020 to October 2020 and then thete is a gradual increase to the peak.
 
 ```{r}
+# plot of international travelling
 ggplot(new_data, aes(x=parameter, y=value)) +
   scale_x_date(date_breaks = "3 month", date_labels = "%m-%Y") +
 geom_point(mapping = aes(x = parameter, y = value)) +
@@ -132,8 +135,6 @@ geom_point(mapping = aes(x = parameter, y = value)) +
 
  Covid-19 hits New Zealand in March 2020, which leads to level 4 lockdown and international boarder crossing in April 2020.This can be one of the major reason for the drop in the number of international travellers. Moreover, considerable reduction in New zealand finance and unhealthly jobmarket trends impacted in travelling.
 ```{r}
-library("ggExtra")
-library("ggplot2")
 piris <- ggplot(new_data, aes(parameter, value, colour = category)) +
   scale_x_date(date_breaks = "4 month", date_labels = "%m-%Y") +
   geom_point() +
